@@ -1,0 +1,899 @@
+/* ============================================================
+   雾歇香薰 · 在线作品集 全站样式
+   技术栈：纯静态 CSS，无构建、无框架、无 CDN 依赖
+   设计 token 取自 Figma 设计稿（文件 Untitled，节点 2:5281）
+   ============================================================ */
+
+:root {
+  /* ---- 颜色：取自 Figma globalVars 与节点内联填充 ---- */
+  --c-bg: #f4f2ec;           /* s1  米白 · 页面背景 */
+  --c-bg-series: #fbfaf6;    /*     香调系列背景 */
+  --c-surface: #eae7df;      /* s7  浅米灰 · 信号区 / 卡片背景 */
+  --c-primary: #344c40;      /* s2  墨绿 · 主色 */
+  --c-primary-deep: #233b30; /*     页脚 / 首屏深绿背景 */
+  --c-ink: #303a35;          /* s8  深墨 · 主文字 */
+  --c-ink-soft: #69716a;     /* s3  灰绿 · 次级文字 */
+  --c-mid: #586a5d;          /* s6  中绿 · 深分隔线 */
+  --c-line: #cecfc5;         /* s9  灰 · 描边 / 浅分隔线 */
+  --c-tint: #dfe5da;         /* s5  浅绿灰 · 标签 / 页脚文字 */
+  --c-tan: #ada590;          /* s10 木色 · 字形意象 */
+  --c-on-dark: #fffefc;      /*     hero 品牌主张文字 */
+  --c-on-dark-soft: #ffffff; /*     hero 正文文字 */
+
+  /* ---- 字体：取自 Figma get_fonts 与各文字节点 styles.fontFamily，无 CDN ---- */
+  --font-display: "Designer Notes", "FZSongKeBenXiuKaiS-R-GB", "STKaiti", "KaiTi", cursive;
+  --font-calli: "SXSGYS", "DFChuW4-B5", "FZSongKeBenXiuKaiS-R-GB", "STKaiti", "KaiTi", serif;
+  --font-sans: "Noto Sans SC", -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- 间距与尺寸：取自 Figma 布局 ---- */
+  --maxw: 1280px;    /* 内容最大宽度（1440 画布 - 80 × 2 边距） */
+  --gutter: 80px;    /* 页面左右边距 */
+  --header-h: 88px;  /* 导航高度 */
+  --radius: 3px;     /* 圆角（克制） */
+  --gap-card: 28px;  /* 产品卡间距 */
+  --gap-scene: 24px; /* 场景卡间距 */
+
+  /* 区块垂直留白 */
+  --space-1: 24px;
+  --space-2: 40px;
+  --space-3: 64px;
+  --space-4: 88px;
+}
+
+/* ---- 基础重置 ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--c-ink);
+  background: var(--c-bg);
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+/* ---- 布局工具 ---- */
+.container {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.section { padding: var(--space-4) 0; }
+
+/* 章节标识：设计里的「章节标识」小标签 */
+.section-tag {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--c-ink-soft);
+}
+
+/* 章节标题：默认 Designer Notes；各章节标题按 Figma 各自指定字体 */
+.section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 42px;
+  line-height: 1.4;
+  color: var(--c-ink);
+}
+
+#ai-entry .section-title {
+  font-family: "RTWS ShangYa Demo", "Designer Notes", "FZSongKeBenXiuKaiS-R-GB", serif;
+  font-size: 30px;
+}
+
+#product-series .section-title {
+  font-family: "DFChuW4-B5", "FZSongKeBenXiuKaiS-R-GB", "Noto Serif SC", serif;
+  margin-top: 18px;
+}
+
+/* ---- 顶部导航 ---- */
+.site-header {
+  height: var(--header-h);
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-line);
+}
+
+.header-inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 3px;
+  color: var(--c-primary);
+}
+
+.nav { display: flex; gap: var(--space-2); }
+.nav-link { font-family: var(--font-display); font-size: 13px; color: var(--c-ink-soft); }
+.nav-link.is-active {
+  font-family: "FZSongKeBenXiuKaiS-R-GB", "STKaiti", "KaiTi", serif;
+  color: var(--c-primary);
+}
+
+/* ---- 首屏 Hero ---- */
+#hero {
+  background-color: var(--c-primary-deep);
+  background-image: linear-gradient(rgba(35, 59, 48, 0.55), rgba(35, 59, 48, 0.55)),
+    url("../assets/images/hero-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+#hero .section-tag { color: var(--c-tint); }
+
+.hero-title {
+  font-family: var(--font-calli);
+  font-weight: 400;
+  font-size: 64px;
+  line-height: 1.3;
+  color: var(--c-on-dark);
+}
+
+.hero-body {
+  font-family: var(--font-display);
+  color: var(--c-on-dark-soft);
+}
+
+/* ---- AI 信号区 ---- */
+#ai-entry {
+  background: var(--c-surface);
+  padding: 40px 0; /* Figma：上下 40px，覆盖 .section 的 88px */
+}
+
+/* 左文右钮的横排布局 */
+.ai-entry-inner {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+.ai-entry-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* AI 入口：此处的「章节标识」在 Figma 用 Designer Notes（其余 section 用 Noto Sans SC） */
+#ai-entry .section-tag { font-family: var(--font-display); }
+
+.entry-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+
+/* ---- 按钮：hero 实底 / AI 入口描边，共用结构 ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  height: 48px;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--c-primary);
+  white-space: nowrap;
+}
+
+.btn-arrow {
+  font-family: var(--font-sans);
+  font-size: 18px;
+}
+
+#ai-entry .btn,
+#safety .btn {
+  background: transparent;
+  border-color: var(--c-line);
+}
+
+/* AI 信号区：窄屏单栏 */
+@media (max-width: 768px) {
+  .ai-entry-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+}
+
+/* ---- 品牌故事：左题记 + 右正文 双栏 ---- */
+.story-layout {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  column-gap: 100px;
+  row-gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* 字形意象：雾 —— 歇 */
+.story-glyphs {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-top: var(--space-1);
+}
+
+.glyph {
+  font-family: var(--font-calli);
+  font-size: 120px;
+  line-height: 1;
+  color: var(--c-tan);
+}
+
+.glyph-dash {
+  width: 60px;
+  height: 1px;
+  background: var(--c-ink-soft);
+}
+
+.story-right p {
+  margin: 0 0 22px;
+  line-height: 1.8;
+}
+
+.story-right p.story-note {
+  margin: 23px 0 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-ink-soft);
+}
+
+/* 品牌故事：窄屏单栏，缩小字形 */
+@media (max-width: 768px) {
+  .story-layout {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
+  .glyph { font-size: 72px; }
+  .story-glyphs { gap: 20px; }
+}
+
+/* ---- 香调系列 ---- */
+#product-series {
+  background: var(--c-bg-series);
+  padding: 64px 0 72px; /* 覆盖 .section 的 88px，对齐 Figma 64/72 */
+}
+
+.series-lead {
+  margin: 18px 0 40px;
+  font-family: "Cinzel", "Georgia", "Songti SC", "STSong", serif;
+  font-size: 12px;
+  color: var(--c-ink-soft);
+}
+
+/* 系列分组：顶部分隔线 + 组头 + 产品栅格，组间 40px */
+.series-group {
+  border-top: 1px solid var(--c-line);
+  padding-top: 28px;
+  margin-bottom: 40px;
+}
+.series-group:last-child { margin-bottom: 0; }
+
+/* 组头：左「序号 + 名称 + 英文」，右「题记」 */
+.group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.group-name {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.group-index {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--c-ink-soft);
+}
+
+.group-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.5;
+  color: var(--c-primary);
+}
+
+.group-en {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-ink-soft);
+}
+
+.group-epigraph {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+
+/* 产品卡栅格：桌面一行 3 个，间距 28px */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap-card);
+}
+
+.product-card { display: flex; flex-direction: column; }
+
+/* 产品图：408×300 等比裁切；材质标识（左上）+ 品牌标识（右下）叠加 */
+.product-img-wrap { position: relative; }
+
+.product-img {
+  aspect-ratio: 408 / 300;
+  width: 100%;
+  object-fit: cover;
+  background: var(--c-surface);
+  border-radius: var(--radius);
+}
+
+.product-material {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--c-primary);
+}
+
+.product-brand {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--c-ink-soft);
+}
+
+/* 名称：图下 14px */
+.product-name {
+  margin: 14px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.5;
+  color: var(--c-ink);
+}
+
+/* 香调场景（左）+ 数据性质（右），名称下 14px */
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.product-scene {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--c-ink-soft);
+}
+
+.product-source {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--c-ink-soft);
+  white-space: nowrap;
+}
+
+/* 产品卡：窄屏改为两列，避免 375px 下过挤 */
+@media (max-width: 720px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .product-name { font-size: 18px; }
+}
+
+/* ---- 日常场景：四张场景卡片 ---- */
+#scene .section-title {
+  font-family: var(--font-calli);
+  margin-top: 32px;
+}
+
+.scene-lead {
+  margin: 32px 0 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+
+/* 场景卡栅格：桌面一行 4 个，间距 24px */
+.scene-grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--gap-scene);
+}
+
+/* 场景卡：Figma 302×242，浅米灰底、28px 内边距、无圆角 */
+.scene-card {
+  background: var(--c-surface);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.scene-label {
+  align-self: flex-end;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: var(--c-ink-soft);
+}
+
+.scene-title {
+  margin: 28px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 25px;
+  line-height: 1.5;
+  color: var(--c-ink);
+}
+
+.scene-body {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.scene-note {
+  margin: 37px 0 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+/* 场景卡：窄屏收为两列 / 单列 */
+@media (max-width: 900px) {
+  .scene-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .scene-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- 使用与安全：左题记 + 右说明 双栏 ---- */
+#safety {
+  background: var(--c-surface);
+  padding: 64px 0 80px; /* 覆盖 .section 的 88px，对齐 Figma 64/80 */
+}
+
+.safety-layout {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: 360px 848px;
+  column-gap: 72px;
+}
+
+.safety-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.safety-title {
+  margin: 0;
+  font-family: var(--font-calli);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1.5;
+  color: var(--c-ink);
+}
+
+.safety-right {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.safety-item-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.safety-item-body {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.safety-divider {
+  height: 1px;
+  background: var(--c-line);
+}
+
+.safety-disclaimer {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+/* 使用与安全：窄屏单栏 */
+@media (max-width: 900px) {
+  .safety-layout {
+    grid-template-columns: 1fr;
+    row-gap: var(--space-2);
+  }
+}
+
+/* ---- 页脚 ---- */
+.site-footer {
+  background: var(--c-primary-deep);
+  color: var(--c-tint);
+}
+
+/* ---- 移动端：收窄页边距，保证 375px 下无横向滚动 ---- */
+@media (max-width: 768px) {
+  :root { --gutter: 24px; }
+}
+
+/* ============================================================
+   AI 客服页（demo.html）
+   ============================================================ */
+.chat-page {
+  padding: 64px 0 80px;
+}
+
+/* 页面导言 */
+.page-tag {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--c-ink-soft);
+}
+
+.page-title {
+  margin: 16px 0 0;
+  font-family: var(--font-calli);
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 1.5;
+  color: var(--c-ink);
+}
+
+.page-intro {
+  margin: 16px 0 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--c-ink-soft);
+}
+
+/* 对话工作区卡片：浅米白底 + 描边 + 32px 内边距，内部 24px 间距 */
+.chat-card {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: var(--c-bg-series);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+/* 顾问身份：墨绿方标 + 名称与副题 */
+.consultant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.consultant-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--c-primary);
+  color: var(--c-bg);
+  font-family: var(--font-calli);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.consultant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.consultant-name {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.consultant-sub {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+/* 分隔线 */
+.chat-divider {
+  height: 1px;
+  background: var(--c-line);
+}
+
+/* 演示性质说明条 */
+.demo-note {
+  margin: 0;
+  padding: 12px;
+  background: var(--c-surface);
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--c-primary);
+}
+
+/* 对话消息：用户右对齐气泡 / 顾问左对齐正文 */
+.msg--user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.msg--ai {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.msg-sender {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-ink-soft);
+}
+
+.msg--ai .msg-sender {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+.msg-bubble {
+  margin: 8px 0 0;
+  max-width: 380px;
+  padding: 16px;
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.msg-answer {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+/* 预设问题 */
+.preset-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preset-label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset {
+  padding: 8px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--c-primary);
+  cursor: pointer;
+}
+
+/* 输入区 */
+.chat-input {
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.chat-input-placeholder {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--c-ink-soft);
+}
+
+.chat-input-row {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+.send-btn {
+  padding: 8px 20px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--c-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--c-bg);
+  cursor: pointer;
+}
+
+/* 输入提示 */
+.chat-hint {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--c-ink-soft);
+}
+
+/* 客服页：窄屏收窄卡片内边距 */
+@media (max-width: 768px) {
+  .chat-card { padding: 24px 16px; }
+}
+
+/* ---- 实时对话（JS 动态渲染） ---- */
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* 输入区真实文本框：无边框、随内容换行、不出现滚动条 */
+.chat-textarea {
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--c-ink);
+}
+
+.chat-textarea::placeholder {
+  color: var(--c-ink-soft);
+}
+
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 来源列表：回答下方、可追溯的知识出处 */
+.sources {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--c-line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sources-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--c-ink-soft);
+}
+
+.source-item {
+  padding: 10px 12px;
+  background: var(--c-surface);
+  border-radius: var(--radius);
+}
+
+.source-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.source-title {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--c-primary);
+}
+
+.source-score {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--c-ink-soft);
+  white-space: nowrap;
+}
+
+.source-body {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--c-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 错误提示 */
+.msg-error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  background: #f6e6e0;
+  border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.8;
+  color: #9a4a3a;
+}

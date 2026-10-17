@@ -1,0 +1,25 @@
+# === 密钥：绝不提交任何 .env（含真实 API Key），只提交 .env.example 模板 ===
+.env
+**/.env
+!**/.env.example
+
+# === Python 本地环境与缓存 ===
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# === 生成的知识库索引数据（可用 python build_kb.py 重建）===
+kb_data/
+
+# === 原始大图（未被网站引用，体积大，保留在本地磁盘）===
+website/产品主图/
+website/氛围图/
+
+# === 操作系统 / 编辑器 / 工具本地状态 ===
+.DS_Store
+.archify/
+.claude/
+.vscode/
+.workbuddy/

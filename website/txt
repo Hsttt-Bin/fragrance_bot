@@ -1,0 +1,2 @@
+event: retrieval
+data: {"query": "", "rewritten_queries": [], "results": [{"vector_score": 0.6322, "bm25_score": 0.0, "final_score": 0.016667}, {"vector_score": 0.5969, "bm25_score": 0.0, "final_score": 0.016393}, {"vector_score": 0.5968, "bm25_score": 0.0, "final_score": 0.016129}, {"vector_score": 0.5921, "bm25_score": 0.0, "final_score": 0.015873}, {"vector_score": 0.5919, "bm25_score": 0.0, "final_score": 0.015625}]}

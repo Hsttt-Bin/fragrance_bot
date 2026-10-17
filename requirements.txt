@@ -1,0 +1,5 @@
+openai>=1.30
+numpy>=1.26
+jieba>=0.42
+faiss-cpu>=1.7
+python-dotenv>=1.0

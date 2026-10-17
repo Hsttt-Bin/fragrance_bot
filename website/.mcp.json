@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "figma-mcp-rust": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "--registry=https://registry.npmmirror.com",
+        "@alvinindra/figma-mcp-rust@latest"
+      ],
+      "env": {}
+    }
+  }
+}

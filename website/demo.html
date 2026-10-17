@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 客服 · 雾歇·MistAway</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 全站导航（复用自 index.html） -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html">雾歇·MistAway</a>
+      <nav class="nav">
+        <a class="nav-link" href="index.html">首页</a>
+        <a class="nav-link is-active" href="demo.html">AI 客服 ↗</a>
+        <a class="nav-link" href="about.html">关于我</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- AI 客服页（Figma 节点「AI 客服 · 桌面端」） -->
+    <section class="chat-page">
+      <div class="container">
+        <!-- 页面导言 -->
+        <p class="page-tag">香气顾问</p>
+        <h1 class="page-title">问香气，也看依据。</h1>
+        <p class="page-intro">一个问题，一段简洁回答，以及可追溯的知识来源。<br>这里把检索过程摊开，不把 AI 当作黑箱。</p>
+
+        <!-- 对话工作区 -->
+        <div class="chat-card">
+          <!-- 顾问身份 -->
+          <div class="consultant">
+            <span class="consultant-avatar" aria-hidden="true">雾</span>
+            <div class="consultant-info">
+              <p class="consultant-name">雾歇 · 香气顾问</p>
+              <p class="consultant-sub">依据你的故事，推荐你的香气</p>
+            </div>
+          </div>
+
+          <div class="chat-divider"></div>
+
+          <!-- 演示性质说明 -->
+          <p class="demo-note">已接入实时检索：下方回答、来源摘录与得分均由后端真实返回。</p>
+
+          <!-- 对话消息列表（JS 动态渲染，初始一条欢迎语） -->
+          <div id="chat-messages" class="chat-messages">
+            <div class="msg msg--ai">
+              <span class="msg-sender">MISTAWAY</span>
+              <p class="msg-answer">你好，我是雾歇香气顾问。关于香调、使用或安全的问题，都可以问我。</p>
+            </div>
+          </div>
+
+          <!-- 预设问题 -->
+          <div class="preset-block">
+            <p class="preset-label">也可以从这些问题开始</p>
+            <div class="preset-list">
+              <button class="preset" type="button">孕妇能用吗</button>
+              <button class="preset" type="button">蜡烛烧出洞怎么办</button>
+              <button class="preset" type="button">书房适合什么香调</button>
+              <button class="preset" type="button">木质调和水生调有什么不同</button>
+            </div>
+          </div>
+
+          <!-- 输入区 -->
+          <div class="chat-input">
+            <textarea id="chat-textarea" class="chat-textarea" rows="2" maxlength="200" placeholder="说说你想了解的香气或使用问题…"></textarea>
+            <div class="chat-input-row">
+              <span id="chat-count" class="chat-count">0 / 200</span>
+              <button id="send-btn" class="send-btn" type="button">发送 ↑</button>
+            </div>
+          </div>
+
+          <p class="chat-hint">输入上限 200 字 · 支持回车发送，回答时禁用发送。回答与来源由本地后端实时生成。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚（复用自 index.html） -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>雾歇香薰</p>
+      <p>个人作品集 · 非销售网站。</p>
+    </div>
+  </footer>
+
+  <script src="js/chat.js" defer></script>
+</body>
+</html>
