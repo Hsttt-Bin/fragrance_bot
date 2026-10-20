@@ -1,116 +1,184 @@
-"""检索测试用例评测：50 条客服提问 → 记录 top-1 chunk 及各项分数，保存 CSV / JSON。
+"""检索质量闭环评测：读检索评测集.json，跑检索，按 entry_id 自动判定命中率。
 
-用法：python eval_retrieval.py
-产物：检索测试用例结果.csv、检索测试用例结果.json
+用法：python eval_retrieval.py [-k 5] [--no-rewrite] [--no-rerank]
+
+产物：
+  - 检索评测报告.csv     逐条明细（问题/期望ID/命中top-k的entry_id/各项分数/是否命中）
+  - 检索评测报告.json    汇总指标（Top1/Top5 命中率、MRR，按意图分类）
+
+命中判定：
+  - 普通问题（期望ID 非空）：top-k 结果里出现任一期望 entry_id 即判命中。
+  - 范围外问题（期望ID 为空）：top-1 置信度低于 WEB_SEARCH_THRESHOLD 即判「正确拒答」。
 """
+import argparse
 import csv
 import json
 from datetime import datetime
 
+from knowledge_base import config
 from knowledge_base.retriever import HybridRetriever
 
-# 50 条测试用例（覆盖使用说明 / 商品信息 / 香型 / 成分安全 / 物流售后）
-TEST_CASES = [
-    "蜡烛烧出来一个坑怎么办",
-    "第一次点蜡烛要烧多久",
-    "点蜡烛之前烛芯要剪多短",
-    "蜡烛冒黑烟是什么原因",
-    "蜡烛点不着怎么办",
-    "怎么正确熄灭蜡烛",
-    "蜡烛火焰一直晃是怎么回事",
-    "蜡烛表面有白霜正常吗",
-    "蜡烛和杯壁分开了还能用吗",
-    "蜡烛香味越来越淡了怎么办",
-    "单次燃烧不能超过多久",
-    "蜡烛熄灭后多久能再点",
-    "蜡烛烧到剩多少就不能用了",
-    "蜡烛要离窗帘多远才安全",
-    "蜡烛平时怎么存放",
-    "造型蜡烛和容器蜡烛有什么区别",
-    "造型蜡烛多少钱",
-    "试香小杯蜡多少钱",
-    "陶瓷容器蜡烛多少克",
-    "玩具蜡烛价格多少",
-    "装饰蜡烛多少钱",
-    "你们一共有多少种香型",
-    "99元档位有哪些香型",
-    "檀木香是什么调性",
-    "乌木适合什么场景",
-    "送女朋友推荐什么香型",
-    "卧室适合什么香型",
-    "有什么果香调的蜡烛",
-    "抹茶青柚多少钱",
-    "椰子糯米是什么味道",
-    "木质调都有哪些",
-    "蜡烛是用什么蜡做的",
-    "香精是不是天然的",
-    "棉芯含铅吗",
-    "大豆蜡燃烧会有黑烟吗",
-    "蜡烛有没有检测报告",
-    "孕妇能用香薰蜡烛吗",
-    "家里有婴儿能点蜡烛吗",
-    "养猫能用什么香型",
-    "养狗家庭点蜡烛要注意什么",
-    "过敏体质能用香薰蜡烛吗",
-    "蜡烛能吃吗",
-    "多久能发货",
-    "默认发什么快递",
-    "蜡烛可以退换吗",
-    "收到货蜡烛破了怎么办",
-    "蜡烛保质期多久",
-    "能开发票吗",
-    "蜡烛烧完的罐子能回收吗",
-    "续蜡怎么收费",
-]
+EVAL_FILE = "检索评测集.json"
 
-FIELDS = ["序号", "查询", "chunk_id", "分类", "标题", "精排分", "综合分", "向量分", "关键词分", "备注"]
+
+def load_cases(path: str) -> list:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return data["测试问题集"]
+
+
+def judge_hit(topk_ids: list, expected: list) -> bool:
+    """普通问题命中判定：top-k 结果的 entry_id 与期望 ID 有交集即命中。"""
+    if not expected:
+        return False
+    return any(eid in topk_ids for eid in expected)
 
 
 def main():
-    retriever = HybridRetriever()
-    rows = []
-    for idx, q in enumerate(TEST_CASES, 1):
-        try:
-            results = retriever.search(q, k=1)
-            if not results:
-                rows.append({"序号": idx, "查询": q, "备注": "无结果"})
-                print(f"[{idx:2d}/{len(TEST_CASES)}] 无结果：{q}")
-                continue
-            r = results[0]
-            rows.append({
-                "序号": idx,
-                "查询": q,
-                "chunk_id": r.chunk["id"],
-                "分类": r.chunk["category"],
-                "标题": r.chunk["title"],
-                "精排分": round(r.rerank_score, 4),
-                "综合分": round(r.final_score, 4),
-                "向量分": round(r.vector_score, 4),
-                "关键词分": round(r.keyword_score, 4),
-                "备注": "",
-            })
-            print(f"[{idx:2d}/{len(TEST_CASES)}] chunk#{r.chunk['id']:>2d} {r.chunk['title'][:18]} ← {q}")
-        except Exception as e:
-            rows.append({"序号": idx, "查询": q, "备注": f"错误：{e}"})
-            print(f"[{idx:2d}/{len(TEST_CASES)}] 错误：{q} → {e}")
+    parser = argparse.ArgumentParser(description="检索质量闭环评测")
+    parser.add_argument("-k", type=int, default=5, help="判定命中的 top-k（默认 5）")
+    parser.add_argument("--no-rewrite", action="store_true", help="关闭 query 改写")
+    parser.add_argument("--no-rerank", action="store_true", help="关闭 rerank 精排")
+    args = parser.parse_args()
 
-    csv_path = "检索测试用例结果.csv"
+    retriever = HybridRetriever()
+    cases = load_cases(EVAL_FILE)
+
+    rows = []
+    # 分类统计：每类意图累计 hit / total / mrr 之和 / 拒答正确数
+    stats = {}  # 意图 -> {"total", "hit1", "hitk", "mrr_sum", "reject_ok", "reject_total"}
+
+    for case in cases:
+        q = case["问题"]
+        expected = case["期望ID"]
+        intent = case["意图"]
+
+        # 跑检索，取 top-k
+        results = retriever.search(
+            q, k=args.k, rewrite=not args.no_rewrite, rerank=not args.no_rerank
+        )
+        topk_ids = [r.chunk.get("entry_id", "") for r in results if r.chunk.get("entry_id")]
+
+        # 置信度（用于范围外拒答判定）：精排分优先，否则向量分
+        top1 = results[0] if results else None
+        if top1 is None:
+            confidence = 0.0
+        elif retriever.rerank_scores:
+            confidence = top1.rerank_score
+        else:
+            confidence = top1.vector_score
+
+        s = stats.setdefault(intent, {"total": 0, "hit1": 0, "hitk": 0, "mrr_sum": 0.0, "reject_ok": 0, "reject_total": 0})
+        s["total"] += 1
+
+        if expected:
+            # 普通问题：算 Top1/Top5 命中 + MRR
+            hit1 = topk_ids[:1] and (topk_ids[0] in expected)
+            hitk = judge_hit(topk_ids, expected)
+            # MRR：期望 ID 在 top-k 里的最早命中位置（rank 从 1 开始）
+            rr = 0.0
+            for rank, eid in enumerate(topk_ids, 1):
+                if eid in expected:
+                    rr = 1.0 / rank
+                    break
+            s["hit1"] += int(hit1)
+            s["hitk"] += int(hitk)
+            s["mrr_sum"] += rr
+            rows.append({
+                "ID": case["id"],
+                "意图": intent,
+                "问题": q,
+                "期望ID": "、".join(expected),
+                "命中top-k的ID": "、".join(topk_ids[:args.k]),
+                "top1ID": topk_ids[0] if topk_ids else "",
+                "是否命中(top{})".format(args.k): "命中" if hitk else "未命中",
+                "是否Top1": "是" if hit1 else "否",
+                "精排分": round(top1.rerank_score, 4) if top1 else 0.0,
+                "向量分": round(top1.vector_score, 4) if top1 else 0.0,
+            })
+        else:
+            # 范围外问题（期望ID 空）：正确行为是低分拒答/转联网
+            rejected = confidence < config.WEB_SEARCH_THRESHOLD
+            s["reject_total"] += 1
+            s["reject_ok"] += int(rejected)
+            rows.append({
+                "ID": case["id"],
+                "意图": intent,
+                "问题": q,
+                "期望ID": "（无，应拒答）",
+                "命中top-k的ID": "、".join(topk_ids[:args.k]),
+                "top1ID": topk_ids[0] if topk_ids else "",
+                "是否命中(top{})".format(args.k): "正确拒答" if rejected else "误召回",
+                "是否Top1": "-",
+                "精排分": round(top1.rerank_score, 4) if top1 else 0.0,
+                "向量分": round(top1.vector_score, 4) if top1 else 0.0,
+            })
+
+        print(f"[{case['id']}] {q[:24]:<24} → {topk_ids[:3]}")
+
+    # 汇总
+    summary = {"generated_at": datetime.now().isoformat(timespec="seconds"), "k": args.k, "kb": retriever.kb.meta, "total": len(cases), "by_intent": {}}
+    overall = {"total": 0, "hit1": 0, "hitk": 0, "mrr_sum": 0.0, "reject_ok": 0, "reject_total": 0}
+    for intent, s in sorted(stats.items()):
+        summary["by_intent"][intent] = {
+            "总数": s["total"],
+            "Top1命中数": s["hit1"],
+            "Top{}命中数".format(args.k): s["hitk"],
+            "Top1命中率": round(s["hit1"] / s["total"], 4) if s["total"] else 0.0,
+            "Top{}命中率".format(args.k): round(s["hitk"] / s["total"], 4) if s["total"] else 0.0,
+            "MRR": round(s["mrr_sum"] / s["total"], 4) if s["total"] else 0.0,
+            "拒答正确数": s["reject_ok"],
+            "拒答总数": s["reject_total"],
+        }
+        overall["total"] += s["total"]
+        overall["hit1"] += s["hit1"]
+        overall["hitk"] += s["hitk"]
+        overall["mrr_sum"] += s["mrr_sum"]
+        overall["reject_ok"] += s["reject_ok"]
+        overall["reject_total"] += s["reject_total"]
+
+    # 普通问题（期望ID非空）的净指标
+    normal_total = overall["total"] - overall["reject_total"]
+    summary["整体"] = {
+        "普通问题数": normal_total,
+        "范围外问题数": overall["reject_total"],
+        "Top1命中率": round(overall["hit1"] / normal_total, 4) if normal_total else 0.0,
+        "Top{}命中率".format(args.k): round(overall["hitk"] / normal_total, 4) if normal_total else 0.0,
+        "MRR": round(overall["mrr_sum"] / normal_total, 4) if normal_total else 0.0,
+        "范围外拒答正确率": round(overall["reject_ok"] / overall["reject_total"], 4) if overall["reject_total"] else 0.0,
+    }
+
+    # 写 CSV
+    csv_path = "检索评测报告.csv"
+    fields = ["ID", "意图", "问题", "期望ID", "命中top-k的ID", "top1ID", "是否命中(top{})".format(args.k), "是否Top1", "精排分", "向量分"]
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(rows)
 
-    json_path = "检索测试用例结果.json"
-    payload = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "kb": retriever.kb.meta,
-        "total": len(TEST_CASES),
-        "results": rows,
-    }
+    # 写 JSON
+    json_path = "检索评测报告.json"
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+        json.dump({"summary": summary, "results": rows}, f, ensure_ascii=False, indent=2)
 
-    print(f"\n完成：{len(rows)} 条用例，已保存到 {csv_path} 和 {json_path}")
+    # 打印汇总
+    print("\n" + "=" * 56)
+    print("检索质量评测汇总（top-{} 判定）".format(args.k))
+    print("=" * 56)
+    print(f"知识库：{retriever.kb.meta['n_chunks']} 块 / 模型 {retriever.kb.meta['model']}")
+    print(f"测试用例：{len(cases)} 条（普通 {normal_total} 条 + 范围外 {overall['reject_total']} 条）")
+    print()
+    for intent in sorted(stats.keys()):
+        s = stats[intent]
+        if intent == "范围外问题":
+            print(f"  [{intent}] 拒答正确率 {s['reject_ok']}/{s['reject_total']} = {s['reject_ok']/s['reject_total']:.1%}")
+        else:
+            print(f"  [{intent}] Top1 {s['hit1']}/{s['total']} = {s['hit1']/s['total']:.1%} | Top{args.k} {s['hitk']}/{s['total']} = {s['hitk']/s['total']:.1%} | MRR {s['mrr_sum']/s['total']:.3f}")
+    print()
+    print(f"  【整体普通问题】Top1 {overall['hit1']}/{normal_total} = {overall['hit1']/normal_total:.1%} | Top{args.k} {overall['hitk']}/{normal_total} = {overall['hitk']/normal_total:.1%} | MRR {overall['mrr_sum']/normal_total:.3f}")
+    if overall["reject_total"]:
+        print(f"  【范围外拒答】正确 {overall['reject_ok']}/{overall['reject_total']} = {overall['reject_ok']/overall['reject_total']:.1%}")
+    print(f"\n产物：{csv_path}、{json_path}")
 
 
 if __name__ == "__main__":

@@ -560,6 +560,11 @@ a { color: inherit; text-decoration: none; }
 .site-footer {
   background: var(--c-primary-deep);
   color: var(--c-tint);
+  padding-top: 12px;   /* 只加上方空白，把字往下挪；不加边框、不改字重 */
+}
+
+.site-footer p:last-child {
+  margin-bottom: 4px;  /* 底部少留空白，抵消上方新增，绿栏整体高度不变 */
 }
 
 /* ---- 移动端：收窄页边距，保证 375px 下无横向滚动 ---- */
@@ -828,62 +833,6 @@ a { color: inherit; text-decoration: none; }
 .send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* 来源列表：回答下方、可追溯的知识出处 */
-.sources {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--c-line);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sources-label {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: var(--c-ink-soft);
-}
-
-.source-item {
-  padding: 10px 12px;
-  background: var(--c-surface);
-  border-radius: var(--radius);
-}
-
-.source-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.source-title {
-  font-family: var(--font-sans);
-  font-size: 12px;
-  color: var(--c-primary);
-}
-
-.source-score {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--c-ink-soft);
-  white-space: nowrap;
-}
-
-.source-body {
-  margin: 6px 0 0;
-  font-family: var(--font-display);
-  font-size: 12px;
-  line-height: 1.8;
-  color: var(--c-ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* 错误提示 */

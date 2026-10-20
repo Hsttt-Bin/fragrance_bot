@@ -1,8 +1,14 @@
 // 雾歇香薰 · AI 客服前端
-// 连接本地 FastAPI 后端（SSE 流式），解析 retrieval / sources / content / error / done 事件。
+// 连接本地 FastAPI 后端（SSE 流式），解析 retrieval / content / error / done 事件。
+// 后端仍会下发 sources 事件，但前端不再渲染「依据来源」，这里直接忽略。
 // 这里只放后端地址，绝不出现任何 API Key。
 
 const API_BASE = "http://127.0.0.1:8000";
+
+// 页面加载生成一个会话 ID：让后端记住「香气推荐」多轮追问的上下文。
+const SESSION_ID = (typeof crypto !== "undefined" && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const messagesEl = document.getElementById("chat-messages");
 const textarea = document.getElementById("chat-textarea");
@@ -62,46 +68,6 @@ function appendAiMessage() {
   return { wrap, answer };
 }
 
-// ---- 来源渲染：标题 + 分数 + 正文摘录 ----
-function fmtScore(v) {
-  return typeof v === "number" ? v.toFixed(3) : "—";
-}
-
-function renderSources(wrap, sources) {
-  if (!Array.isArray(sources) || sources.length === 0) return;
-  const box = document.createElement("div");
-  box.className = "sources";
-
-  const label = document.createElement("p");
-  label.className = "sources-label";
-  label.textContent = "依据来源";
-  box.appendChild(label);
-
-  sources.forEach((s) => {
-    const item = document.createElement("div");
-    item.className = "source-item";
-
-    const head = document.createElement("div");
-    head.className = "source-head";
-    const title = document.createElement("span");
-    title.className = "source-title";
-    title.textContent = s.title || s.category || "资料片段";
-    const score = document.createElement("span");
-    score.className = "source-score";
-    score.textContent = `检索分 ${fmtScore(s.final_score)} · 精排分 ${fmtScore(s.rerank_score)}`;
-    head.append(title, score);
-
-    const body = document.createElement("p");
-    body.className = "source-body";
-    body.textContent = (s.content || "").trim();
-
-    item.append(head, body);
-    box.appendChild(item);
-  });
-
-  wrap.appendChild(box);
-}
-
 function showError(wrap, message) {
   // 若仍在「思考中…」占位阶段，清掉占位文本。
   const answer = wrap.querySelector(".msg-answer");
@@ -149,7 +115,7 @@ async function send(question) {
     const resp = await fetch(`${API_BASE}/api/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: question }),
+      body: JSON.stringify({ message: question, session_id: SESSION_ID }),
     });
 
     if (!resp.ok) {
@@ -175,9 +141,6 @@ async function send(question) {
           firstContent = false;
         }
         ai.answer.appendChild(document.createTextNode(text));
-        scrollToBottom();
-      } else if (name === "sources") {
-        renderSources(ai.wrap, payload);
         scrollToBottom();
       } else if (name === "error") {
         showError(ai.wrap, payload.message || "AI 回复生成失败，请稍后重试");

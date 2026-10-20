@@ -23,12 +23,22 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from knowledge_base import config  # noqa: E402  (只读：ANSWER_MODEL / API Key / 系统提示词等)
 from knowledge_base.retriever import HybridRetriever  # noqa: E402
+from knowledge_base.recommender import (  # noqa: E402
+    _filled_count,
+    _has_info,
+    build_followup,
+    extract_dims,
+    is_recommend_intent,
+    merge_dims,
+    recommend,
+)
 
 router = APIRouter()
 
 
 class ChatRequest(BaseModel):
     message: str = ""
+    session_id: str = ""  # 可选：多轮「香气推荐」追问用，前端每次请求携带
 
 
 def init_retriever() -> HybridRetriever:
@@ -43,6 +53,39 @@ def init_retriever() -> HybridRetriever:
 def _event(name: str, data: str) -> str:
     """构造一条 SSE 事件，data 为已序列化的字符串。"""
     return f"event: {name}\ndata: {data}\n\n"
+
+
+# —— 香气推荐多轮追问的会话状态（内存态，进程内有效）——
+# 按 session_id 记忆「星座 / MBTI / 场景 / 性格」的累计信息；个人作品集规模足够。
+_sessions: dict = {}
+_MAX_SESSIONS = 500
+
+
+def _new_session() -> dict:
+    return {
+        "texts": [],  # 本次推荐对话里用户的原话（供 LLM 理解性格/喜好描述）
+        "dims": {"星座": None, "mbti": None, "场景": [], "性格": False},
+        "followup_asked": False,  # 是否已追问过一轮
+    }
+
+
+def _get_session(session_id: str) -> dict:
+    """按 session_id 取会话；空 id 返回一次性新会话（不落库，不跨请求记忆）。"""
+    sid = (session_id or "").strip()
+    if not sid:
+        return _new_session()
+    if sid not in _sessions:
+        if len(_sessions) >= _MAX_SESSIONS:
+            _sessions.pop(next(iter(_sessions)))  # 超上限时淘汰最早一个
+        _sessions[sid] = _new_session()
+    return _sessions[sid]
+
+
+def _clear_session(session: dict) -> None:
+    """清空会话内容（字段重置，不删除 dict 条目）。"""
+    session["texts"] = []
+    session["dims"] = {"星座": None, "mbti": None, "场景": [], "性格": False}
+    session["followup_asked"] = False
 
 
 def _build_messages(question: str, results: list) -> list:
@@ -100,7 +143,53 @@ async def _stream_llm(messages: list) -> AsyncGenerator[str, None]:
                     yield text
 
 
-async def _stream(retriever: HybridRetriever, question: str) -> AsyncGenerator[str, None]:
+async def _stream(
+    retriever: HybridRetriever, question: str, session_id: str = ""
+) -> AsyncGenerator[str, None]:
+    # === 香气推荐前置分流（多轮，session 记忆；逻辑对齐 search.py 交互模式）===
+    if config.RECOMMEND_ENABLED:
+        session = _get_session(session_id)
+        new_dims = extract_dims(question)
+        mid = _filled_count(session["dims"]) >= 1  # 是否正处于上一轮追问中
+
+        if mid and not _has_info(new_dims):
+            recommend_related = False  # 追问中但用户改问别的：清空状态走普通问答
+        elif mid:
+            recommend_related = True  # 继续累计追问信息
+        else:
+            recommend_related = is_recommend_intent(question)
+
+        if recommend_related:
+            session["texts"].append(question)
+            session["dims"] = merge_dims(session["dims"], new_dims)
+            rag_query = session["texts"][0]  # 推荐失败时降级检索用的原始问句
+
+            if _filled_count(session["dims"]) >= 2 or session["followup_asked"]:
+                # 维度凑齐（或已追问一轮仍不足）→ 直接推荐；失败降级回 RAG
+                reply = await asyncio.to_thread(
+                    recommend, list(session["texts"]), dict(session["dims"])
+                )
+                _clear_session(session)
+                if reply:
+                    yield _event(
+                        "content", json.dumps({"text": reply}, ensure_ascii=False)
+                    )
+                    yield _event("done", json.dumps({"status": "done"}, ensure_ascii=False))
+                    return
+                question = rag_query  # 推荐失败 → 用原始问句走下方 RAG
+            else:
+                # 维度不足 → 追问一轮，保留 session 等下一句补充
+                followup = build_followup(session["dims"])
+                if followup:
+                    session["followup_asked"] = True
+                    yield _event(
+                        "content", json.dumps({"text": followup}, ensure_ascii=False)
+                    )
+                    yield _event("done", json.dumps({"status": "done"}, ensure_ascii=False))
+                    return
+        else:
+            _clear_session(session)  # 普通问答（或追问被中断）：清空推荐状态
+
     # 真实检索（阻塞调用放到线程池，避免卡住事件循环）。
     results = await asyncio.to_thread(retriever.search, question)
 
@@ -172,7 +261,7 @@ async def chat_stream(payload: ChatRequest, request: Request):
         raise HTTPException(status_code=422, detail="message 不能为空")
     retriever: HybridRetriever = request.app.state.retriever
     return StreamingResponse(
-        _stream(retriever, payload.message),
+        _stream(retriever, payload.message, payload.session_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -33,6 +33,20 @@ RULE_KEYWORDS = [
 
 KEYWORDS_PER_CHUNK = 10
 
+# 业务条目 ID 标记：形如 [PROD-001] / [SCENT-005] / [ING-008] / [FAQ-003]
+_ENTRY_ID_RE = re.compile(r"\[([A-Z]+-\d+)\]")
+
+
+def _extract_entry_id(text: str) -> str:
+    """从文本中提取业务条目 ID（第一个匹配），并返回；无则返回空串。"""
+    m = _ENTRY_ID_RE.search(text)
+    return m.group(1) if m else ""
+
+
+def _strip_entry_id(text: str) -> str:
+    """去掉文本中的业务条目 ID 标记（[XXX-xxx]），用于清洗标题显示。"""
+    return _ENTRY_ID_RE.sub("", text).strip()
+
 
 @dataclass
 class Chunk:
@@ -42,6 +56,7 @@ class Chunk:
     content: str
     source_path: str
     keywords: list = field(default_factory=list)
+    entry_id: str = ""  # 业务条目 ID（如 PROD-001 / SCENT-005），用于与评测集对齐
 
     def to_dict(self):
         return asdict(self)
@@ -108,10 +123,14 @@ def parse_markdown(md_path: str) -> list:
             return
         content = "\n".join(buf).strip()
         for part in _split_long_content(content):
+            # 业务条目 ID：优先取标题里的标记，其次取正文里的标记
+            entry_id = _extract_entry_id(title) or _extract_entry_id(part)
             chunks.append(Chunk(
-                id=cid, category=category or "通用", title=title or category,
+                id=cid, category=category or "通用",
+                title=_strip_entry_id(title) or _strip_entry_id(category),
                 content=part, source_path=str(md_path),
                 keywords=_extract_keywords(part),
+                entry_id=entry_id,
             ))
             cid += 1
         buf = []
@@ -136,10 +155,14 @@ def parse_markdown(md_path: str) -> list:
             rows, i = _parse_table(lines, i)
             for r in rows:
                 if r.strip():
+                    # 表格行的业务条目 ID 从行内容里提取（如「檀木 [SCENT-001]」）
+                    entry_id = _extract_entry_id(title) or _extract_entry_id(r)
                     chunks.append(Chunk(
-                        id=cid, category=category or "通用", title=title or category,
-                        content=r, source_path=str(md_path),
-                        keywords=_extract_keywords(r),
+                        id=cid, category=category or "通用",
+                        title=_strip_entry_id(title) or _strip_entry_id(category),
+                        content=_strip_entry_id(r), source_path=str(md_path),
+                        keywords=_extract_keywords(_strip_entry_id(r)),
+                        entry_id=entry_id,
                     ))
                     cid += 1
             continue  # _parse_table 已推进 i
